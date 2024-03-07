@@ -5,13 +5,55 @@ const passport = require('passport')
 const cookieParser = require('cookie-parser')
 const LocalStrategy = require('passport-local').Strategy
 const JwtStrategy = require('passport-jwt').Strategy
+const { Sequelize } = require('sequelize')
+const { Model, DataTypes } = require('sequelize')
+const { hash, verify } =  require('scrypt-mcf')
 
 const app = express()
 const port = 3000
 const jwtSecret = require('crypto').randomBytes(16)
 
+const sequelize = new Sequelize('expressapp', 'root', 'passw', {
+    host: 'localhost',
+    dialect: 'mysql'
+})
+
+
 app.use(logger('dev'))
 
+class User extends Model {}
+
+User.init({
+  username: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  }
+}, {
+  // Other model options go here
+  sequelize, // We need to pass the connection instance
+  modelName: 'User' // We need to choose the model name
+})
+console.log(User === sequelize.models.User); // true
+
+
+sequelize.sync({ force: true }).then(() => {
+    console.log("Database & tables created")
+}).then(() => {
+    const mcfString = hash('walrus', { derivedKeyLength: 64, scryptParams: { logN: 19, r: 8, p: 2 } }).then((mcfString) => {
+        console.log(mcfString);
+        User.create({
+            username: 'walrus',
+            password: mcfString,
+          }).then(user => {
+            console.log(user.id);
+          });
+    })  
+})
 
 /*
 Configure the local strategy for using it in Passport.
@@ -27,14 +69,18 @@ passport.use('username-password', new LocalStrategy(
     session: false // we will store a JWT in the cookie with all the required session data. Our server does not need to keep a session, it's going to be stateless
   },
   function (username, password, done) {
-    if (username === 'walrus' && password === 'walrus') {
-      const user = { 
-        username: 'walrus',
-        description: 'the only user that deserves to get to this server'
-      }
-      return done(null, user) // the first argument for done is the error, if any. In our case there is no error, and so we pass null. The object user will be added by the passport middleware to req.user and thus will be available there for the next middleware and/or the route handler 
-    }
-    return done(null, false)  // in passport returning false as the user object means that the authentication process failed. 
+
+    const user = User.findOne({ where: { username: username } }).then((user) => {
+        if (!user) {
+            return done(null, false);
+        }
+        const isPasswordCorrect = verify(password, user.password);
+        if (isPasswordCorrect) {
+            return done(null, user)
+        }
+        return done(null, false)
+    })
+      // in passport returning false as the user object means that the authentication process failed. 
   }
 ))
 
@@ -58,7 +104,6 @@ passport.use('jwtCookie', new JwtStrategy(
       return done(null, false)
     }
 ))
-
 
 
 app.use(cookieParser())
