@@ -8,6 +8,8 @@ const JwtStrategy = require('passport-jwt').Strategy
 const { Sequelize } = require('sequelize')
 const { Model, DataTypes } = require('sequelize')
 const { hash, verify } =  require('scrypt-mcf')
+const fs = require('fs')
+const https = require('https')
 
 const app = express()
 const port = 3000
@@ -150,6 +152,11 @@ app.use(function (err, req, res, next) {
     res.status(500).send('Something broke!')
   })
 
-app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`)
-})
+const options = {
+  key: fs.readFileSync('./tls/server.key'),
+  cert: fs.readFileSync('./tls/server.crt'),
+}
+  
+https.createServer(options, app).listen(443, () => {
+  console.log('HTTPS server running on port 443');
+});
