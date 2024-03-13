@@ -74,13 +74,13 @@ passport.use('username-password', new LocalStrategy(
         if (!user) {
             return done(null, false);
         }
-        const isPasswordCorrect = verify(password, user.password);
-        if (isPasswordCorrect) {
-            return done(null, user)
-        }
-        return done(null, false)
-    })
-      // in passport returning false as the user object means that the authentication process failed. 
+        const isPasswordCorrect = verify(password, user.password).then((isPasswordCorrect) => {
+            if (isPasswordCorrect) {
+                return done(null, user)
+            }
+            return done(null, false)
+        })
+    }) 
   }
 ))
 
@@ -138,7 +138,7 @@ app.post('/login',
   }
 )
 
-app.post('/logout',
+app.get('/logout',
   (req, res) => {
     res.clearCookie('jwt')
     res.redirect('/login')
