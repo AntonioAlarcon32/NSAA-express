@@ -1,0 +1,18 @@
+# Ignore repo.txt
+repo.txt
+
+# Ignore node_modules directory
+node_modules/
+
+# Ignore tls directory
+tls/
+
+# Ignore .env file
+.env
+
+# Ignore other typical directories
+dist/
+build/
+out/
+logs/
+tmp/
