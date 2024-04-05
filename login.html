@@ -22,6 +22,12 @@
             <input type="submit" value="Log In" />
         </div>
     </form>
+    <button id="githubLogin">Log In with Github</button>
 </body>
-
+<script>
+    document.getElementById('githubLogin').addEventListener('click', function() {
+      window.location.href = 'https://192.168.33.58/auth/github';
+    });
+    </script>
+    
 </html>

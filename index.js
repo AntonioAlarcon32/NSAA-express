@@ -5,6 +5,7 @@ const passport = require('passport')
 const cookieParser = require('cookie-parser')
 const LocalStrategy = require('passport-local').Strategy
 const JwtStrategy = require('passport-jwt').Strategy
+const GitHubStrategy = require('passport-github2').Strategy
 const { Sequelize } = require('sequelize')
 const { Model, DataTypes } = require('sequelize')
 const { hash, verify } =  require('scrypt-mcf')
@@ -12,8 +13,9 @@ const fs = require('fs')
 const https = require('https')
 
 const app = express()
-const port = 3000
 const jwtSecret = require('crypto').randomBytes(16)
+
+require('dotenv').config();
 
 const sequelize = new Sequelize('expressapp', 'root', 'passw', {
     host: 'localhost',
@@ -33,7 +35,7 @@ User.init({
   },
   password: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   }
 }, {
   // Other model options go here
@@ -95,7 +97,7 @@ passport.use('jwtCookie', new JwtStrategy(
       secretOrKey: jwtSecret
     },
     function (jwtPayload, done) {
-      if (jwtPayload.sub && jwtPayload.sub === 'walrus') {
+      if (jwtPayload.sub) {
         const user = { 
           username: jwtPayload.sub,
           description: 'one of the users that deserve to get to this server',
@@ -107,6 +109,17 @@ passport.use('jwtCookie', new JwtStrategy(
     }
 ))
 
+passport.use(new GitHubStrategy({
+  clientID: process.env.GITHUB_CLIENT_ID,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  callbackURL: "https://192.168.33.58/auth/github/callback"
+},
+function(accessToken, refreshToken, profile, done) {
+  User.findOrCreate({ where: { username: profile.username } }).then((user) => {
+    return done(null, user[0]);
+  })
+}
+));
 
 app.use(cookieParser())
 app.use(express.urlencoded({ extended: true })) // needed to retrieve html form fields (it's a requirement of the local strategy)
@@ -129,16 +142,36 @@ app.post('/login',
   (req, res) => { 
     const jwtClaims = {
         sub: req.user.username,
-        iss: 'localhost:3000',
-        aud: 'localhost:3000',
+        iss: '192.168.33.58',
+        aud: '192.168.33.58',
         exp: Math.floor(Date.now() / 1000) + 604800, // 1 week (7×24×60×60=604800s) from now
         role: 'user' // just to show a private JWT field
     }
+    console.log(req.user)
     const token = jwt.sign(jwtClaims, jwtSecret)
     res.cookie('jwt', token, { httpOnly: true, secure: true }) // Write the token to a cookie with name 'jwt' and enable the flags httpOnly and secure.
     res.redirect('/')
   }
 )
+
+app.get('/auth/github/callback', 
+  passport.authenticate('github', { failureRedirect: '/login', session: false}),
+  function(req, res) {
+    // Successful authentication, redirect home.
+    const jwtClaims = {
+      sub: req.user.username,
+      iss: '192.168.33.58',
+      aud: '192.168.33.58',
+      exp: Math.floor(Date.now() / 1000) + 604800, // 1 week (7×24×60×60=604800s) from now
+      role: 'user' // just to show a private JWT field
+  }
+  const token = jwt.sign(jwtClaims, jwtSecret)
+  res.cookie('jwt', token, { httpOnly: true, secure: true }) // Write the token to a cookie with name 'jwt' and enable the flags httpOnly and secure.
+  res.redirect('/')
+});
+
+app.get('/auth/github',
+  passport.authenticate('github', { scope: [ 'user:email' ] }));
 
 app.get('/logout',
   (req, res) => {
