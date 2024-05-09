@@ -26,6 +26,7 @@
     "passport-github2": "^0.1.12",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
+    "passport-openidconnect": "^0.1.2",
     "scrypt-mcf": "^1.1.1",
     "sequelize": "^6.37.1",
     "sqlite3": "^5.1.7"

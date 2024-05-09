@@ -8,6 +8,7 @@ const JwtStrategy = require('passport-jwt').Strategy
 const GitHubStrategy = require('passport-github2').Strategy
 const CustomStrategy = require('passport-custom').Strategy
 const OpenIDConnectStrategy = require('openid-client').Strategy
+const session = require('express-session')
 const { Issuer, custom } = require('openid-client');
 const { Sequelize } = require('sequelize')
 const { Model, DataTypes } = require('sequelize')
@@ -37,14 +38,10 @@ const jwtSecret = require('crypto').randomBytes(16)
 require('dotenv').config();
 
 app.use(session({
-  secret: 'secret', // You should use a long, random, and secure string.
-  resave: false,
-  saveUninitialized: true,
-  cookie: {
-    secure: true, // Ensuring cookies are only used over HTTPS
-    httpOnly: true // Ensuring cookies do not get accessed via client-side scripts
-  }
-}));
+  secret: require('crypto').randomBytes(32).toString('base64url'), // This is the secret used to sign the session cookie. We are creating a random base64url string with 256 bits of entropy.
+  resave: false, // Default value is true (although it is going to be false in the next major release). We do not need the session to be saved back to the session store when the session has not been modified during the request.
+  saveUninitialized: false // Default value is true (although it is going to be false in the next major release). We do not need sessions that are "uninitialized" to be saved to the store
+}))
 
 const radius = new Client({
   host: process.env.RADIUS_IP,
@@ -215,12 +212,11 @@ const oidcIssuer = Issuer.discover("https://accounts.google.com").then((issuer) 
   passport.use('oidc', new OpenIDConnectStrategy({
     client: oidcClient,
     usePKCE: false,
-    params: {
-      scope: 'openid email profile',  // Include scopes here
-    }
-    }, function verify(tokenSet, profile, done) {
-      console.log(profile);
-      User.findOrCreate({ where: { username: profile.email } }).then((user) => {
+    }, function verify(tokenSet, userInfo, done) {
+      if (tokenSet === undefined || userInfo === undefined) {
+        return done('no tokenSet or userInfo')
+      }
+      User.findOrCreate({ where: { username: userInfo.email } }).then((user) => {
         return done(null, user[0]);
       })
     }))
@@ -331,7 +327,7 @@ app.get('/auth/github',
   passport.authenticate('github', { scope: [ 'user:email' ] }));
 
 app.get('/auth/oidc',
-  passport.authenticate('oidc'));
+  passport.authenticate('oidc', {scope: 'openid email profile'}));
 
 app.get('/logout',
   (req, res) => {
