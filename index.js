@@ -56,6 +56,7 @@ const sequelize = new Sequelize('expressapp', 'root', 'passw', {
       // for instance, this is how you can configure the database opening mode:
       mode: SQLite.OPEN_READWRITE | SQLite.OPEN_CREATE | SQLite.OPEN_FULLMUTEX,
     },
+    logging: false
   });
 
 
@@ -78,31 +79,25 @@ User.init({
   sequelize, // We need to pass the connection instance
   modelName: 'User' // We need to choose the model name
 })
-console.log(User === sequelize.models.User); // true
+
 
 
 sequelize.sync({ force: true }).then(() => {
     console.log("Database & tables created")
 }).then(() => {
     const mcfString = hash('walrus', { derivedKeyLength: 64, scryptParams: { logN: 19, r: 8, p: 2 } }).then((mcfString) => {
-        console.log(mcfString);
         User.create({
             username: 'walrus',
             password: mcfString,
-          }).then(user => {
-            console.log(user.id);
-          });
+          })
     })  
 }).then(() => { 
   const mcfString = hash('exam', { derivedKeyLength: 64, scryptParams: { logN: 19, r: 8, p: 2 } }).then((mcfString) => {
-    console.log(mcfString);
     User.create({
         username: 'alanis',
         password: mcfString,
-      }).then(user => {
-        console.log(user.id);
-      });
-})  
+      })
+  })
 })
 
 /*
@@ -201,7 +196,7 @@ passport.use('radius', new CustomStrategy(
 ))
 
 const oidcIssuer = Issuer.discover("https://accounts.google.com").then((issuer) => {
-  console.log('Discovered issuer %s %O', issuer.issuer, issuer.metadata);
+  console.log('Discovered issuer %s', issuer.issuer);
   const oidcClient = new issuer.Client({
     client_id: process.env.GOOGLE_CLIENT_ID,
     client_secret: process.env.GOOGLE_CLIENT_SECRET,
