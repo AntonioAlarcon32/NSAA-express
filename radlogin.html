@@ -7,9 +7,9 @@
 </head>
 
 <body>
-    <p><strong>Want to access your personal web page?</strong></p>
+    <p><strong>Want to access your personal web page with RADIUS?</strong></p>
     <p>Please login to proceed</p>
-    <form action="/login" method="post">  <!-- when the formulary is submitted, it will be POSTed to /login-->
+    <form action="/radlogin" method="post">  <!-- when the formulary is submitted, it will be POSTed to /login-->
         <div>
             <label>Username:</label>
             <input type="text" name="username" />  <!-- the name MUST match the one defined in the local 'username-password' strategy -->
@@ -22,18 +22,5 @@
             <input type="submit" value="Log In" />
         </div>
     </form>
-    <button id="githubLogin">Log In with Github</button>
-    <button id="oidcLogin">Log In with Google OIDC</button>
 </body>
-<script>
-    document.getElementById('githubLogin').addEventListener('click', function() {
-      window.location.href = 'https://localhost/auth/github';
-    });
-</script>
-<script>
-    document.getElementById('oidcLogin').addEventListener('click', function() {
-      window.location.href = 'https://localhost/auth/oidc';
-    });
-</script>
-    
 </html>
